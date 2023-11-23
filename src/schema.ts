@@ -6,6 +6,12 @@ export const lyric = z.object({
     end: z.number(),
 });
 
+export const lyricsType = z.union([
+    z.literal("wbw"),
+    z.literal("lbl"),
+    z.literal("raw"),
+]);
+
 export const lyrics = z.union([
     z.object({
         type: z.literal("wbw"),
@@ -60,6 +66,6 @@ export type LyricsResponse = z.TypeOf<typeof lyricsResponse>;
 
 export type Lyrics = z.TypeOf<typeof lyrics>;
 
-export type LyricsType = Lyrics["type"];
+export type LyricsType = z.TypeOf<typeof lyricsType>;
 
 export type Lyric = z.TypeOf<typeof lyric>;

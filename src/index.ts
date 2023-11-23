@@ -11,9 +11,9 @@ export abstract class UtauError extends Error { }
 /**
  * An error that is thrown when the server response is invalid.
  */
-export class ValidationError extends UtauError {
-    constructor(readonly cause: z.ZodError<schema.LyricsResponse>) {
-        super("Unable to validate server response", { cause })
+export class ValidationError<T> extends UtauError {
+    constructor(message: string, readonly cause: z.ZodError<T>) {
+        super(message, { cause })
     }
 }
 
@@ -26,7 +26,6 @@ export class FailedRequestError extends UtauError {
         readonly status: number
     ) {
         super(`[${status}] ${response.data.message}`);
-        this.name = "LyricsError";
     }
 }
 
@@ -38,6 +37,8 @@ export const DEFAULT_URL = "https://utau.keia.one";
 /** The default API version, usually the recommended one. */
 export const DEFAULT_VERSION: ApiVersion = 1;
 
+const types = z.array(schema.lyricsType).min(1).max(3);
+
 /**
  * Fetch lyrics from the Utau API.
  * 
@@ -48,6 +49,8 @@ export const DEFAULT_VERSION: ApiVersion = 1;
  *              reference to a spotify, apple, or deezer track, e.g., `spotify:4iV5W9uYEdYUVa79Axb7Rh`.
  *              
  * @param types The types of lyrics to search for.
+ * 
+ * @returns The lyrics response or `null` if no lyrics were found.
  */
 export async function fetchLyrics(
     query: string,
@@ -56,26 +59,36 @@ export async function fetchLyrics(
         version = DEFAULT_VERSION,
         ...options
     }: FetchLyricsOptions
-): Promise<schema.LyricsResponse> {
+): Promise<schema.LyricsResponse | null> {
+    const validatedTypes = types.safeParse(options.types);
+    if (!validatedTypes.success) {
+        throw new ValidationError("Unable to validate `types` option", validatedTypes.error);
+    }
+
+    //
     const url = new URL(`/v${version}/lyrics`, baseUrl);
     url.searchParams.set("query", query);
-    url.searchParams.set("types", [...new Set(options.types)].join(","));
+    url.searchParams.set("types", validatedTypes.data.join(","));
 
     const headers = new Headers();
     headers.set("User-Agent", options.userAgent);
     headers.set("Authorization", `Bearer ${options.apiKey}`);
 
     /* make a request to utau */
-    const response = await fetch(url, { headers, signal: options.signal });
+    const response = await (options.fetch ?? fetch)(url, { headers, signal: options.signal });
 
     /* parse the JSON response */
     const result = schema.lyricsResponse.safeParse(await response.json());
     if (!result.success) {
-        throw new ValidationError(result.error);
+        throw new ValidationError("Unable to validate server response", result.error);
     }
 
     /* check if the request was successful. */
     if (!result.data.success) {
+        if (response.status === 404) {
+            return null
+        }
+
         throw new FailedRequestError(result.data, response.status);
     }
 
@@ -117,7 +130,7 @@ export interface FetchLyricsOptions {
     /**
      * The fetch implementation to use.
      */
-    fetch?: typeof fetch;
+    fetch?: (url: URL | string, options: RequestInit) => Promise<Response>;
 
     /**
      * The signal to use for the request.
