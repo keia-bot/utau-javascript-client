@@ -17,7 +17,7 @@ const raw = extract(lyrics, "raw");
 console.log(raw.text); // Swallowed by sounds in the night...
 ```
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > currently, api keys are not being handed out, if you want to use our api, please join our [Discord Server](https://keia.one/discord).
 
 ---
