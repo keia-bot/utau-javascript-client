@@ -15,7 +15,7 @@
     "pretty": true,
     "esModuleInterop": true,
     "newLine": "lf",
-    "removeComments": true,
+    "removeComments": false,
     "inlineSourceMap": true,
     "useDefineForClassFields": true,
 
