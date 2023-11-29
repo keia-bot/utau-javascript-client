@@ -30,6 +30,10 @@ export const lyrics = z.union([
     }),
 ]);
 
+export const albumType = z.enum([
+    "Album", "EP", "LP", "Single", "Unknown"
+])
+
 export const track = z.object({
     id: z.string(),
     title: z.string(),
@@ -39,6 +43,7 @@ export const track = z.object({
     explicit: z.boolean(),
     album_id: z.nullable(z.string()),
     album_name: z.string(),
+    album_type: albumType,
 });
 
 export const failedLyricsResponse = z.object({
